@@ -23,17 +23,17 @@ done = True  # env needs to be reset
 # Construction phase
 input_height = 80
 input_width = 80
-input_channels = 1
+input_channels = 1  # we only look at one frame at a time, so ghosts and power pellets really are invisible when they blink
 conv_n_maps = [32, 64, 64]
 conv_kernel_sizes = [(8,8), (4,4), (3,3)]
 conv_strides = [4, 2, 1]
-conv_paddings = ["SAME"]*3 
-conv_activation = [tf.nn.relu]*3
+conv_paddings = ["SAME"] * 3 
+conv_activation = [tf.nn.relu] * 3
 n_hidden_inputs = 64 * 10 * 10  # conv3 has 64 maps of 10x10 each
 n_hidden = 512
 hidden_activation = tf.nn.relu
-n_outputs = env.action_space.n
-initializer = tf.contrib.layers.variance_scaling_initializer()
+n_outputs = env.action_space.n  # MsPacman has 9 actions: upper left, up, upper right, left, and so on.
+initializer = tf.contrib.layers.variance_scaling_initializer() # He initialization
 
 learning_rate = 0.01
 
@@ -63,8 +63,10 @@ with tf.variable_scope("train"):
     y = tf.placeholder(tf.float32, shape=[None, 1])
     q_value = critic_q_values * tf.one_hot(X_action, n_outputs)
     cost = tf.reduce_mean(tf.square(y - q_value))
+    global_step = tf.Variable(0, trainable=False, name='global_step')
+    increment_global_step = tf.assign_add(global_step, 1)
     optimizer = tf.train.AdamOptimizer(learning_rate)
-    training_op = optimizer.minimize(cost)
+    training_op = optimizer.minimize(cost, global_step=global_step)
 
 init = tf.initialize_all_variables()
 saver = tf.train.Saver()
@@ -101,9 +103,9 @@ mspacman_color = np.array([210, 164, 74]).mean()
 def preprocess_observation(obs):
     img = obs[6:166:2, ::2] # crop and downsize
     img = img.mean(axis=2) # to greyscale
-    img[img==wall_color] = 0 # improve contrast
-    img[img==bg_color] = 40
-    img[img==mspacman_color] = 255
+    img[img == wall_color] = 0 # improve contrast
+    img[img == bg_color] = 40
+    img[img == mspacman_color] = 255
     img = (img - 128) / 128 - 1 # normalize from -1. to 1.
     return img.reshape(80, 80, 1)
 
@@ -113,7 +115,7 @@ learning_start_step = 1000
 learning_every_n_steps = args.learn_iterations
 batch_size = 50
 gamma = 0.95
-skip_start = 90  # skip 90 steps at the start of each game (there is no movement)
+skip_start = 90  # skip boring iterations at the start of each game
 
 with tf.Session() as sess:
     if os.path.isfile(args.path):
@@ -122,7 +124,7 @@ with tf.Session() as sess:
         init.run()
     for iteration in range(n_iterations):
         if args.verbosity > 0:
-            print("\rIteration {}/{} ({:.1f}%)\tepsilon={:.2f}".format(iteration, n_iterations, iteration * 100 / n_iterations, epsilon), end="")
+            print("\rIteration {}/{} ({:.1f}%)\tepsilon={:.2f}\ttraining step={}".format(iteration, n_iterations, iteration * 100 / n_iterations, epsilon, global_step.eval()), end="")
         if done:
             obs = env.reset()
             for skip in range(skip_start):
@@ -131,8 +133,8 @@ with tf.Session() as sess:
         if args.render:
             env.render()
         q_values = actor_q_values.eval(feed_dict={X_state: [state]})
-        epsilon = max(epsilon_min, epsilon_max - (epsilon_max - epsilon_min) * iteration / epsilon_decay_steps)
-        action = epsilon_greedy(q_values, iteration)
+        epsilon = max(epsilon_min, epsilon_max - (epsilon_max - epsilon_min) * global_step.eval() / epsilon_decay_steps)
+        action = epsilon_greedy(q_values, epsilon)
         obs, reward, done, info = env.step(action)
         next_state = preprocess_observation(obs)
         replay_memory.append((state, action, reward, next_state, 1.0 - done))
