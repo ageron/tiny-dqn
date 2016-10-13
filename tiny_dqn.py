@@ -1,13 +1,15 @@
+from __future__ import division, print_function, unicode_literals
+
 import argparse
 parser = argparse.ArgumentParser(description='Train a DQN net to play MsMacman.')
 parser.add_argument('-i', '--iterations', type=int, help='number of training iterations', default=10000)
 parser.add_argument('-l', '--learn-iterations', type=int, help='number of iterations between each training step', default=3)
-parser.add_argument('-s', '--save-iterations', type=int, help='number of training iterations between saving each checkpoint', default=100)
-parser.add_argument('-c', '--copy-iterations', type=int, help='number of training iterations between each copy of the critic to the actor', default=50)
+parser.add_argument('-s', '--save-steps', type=int, help='number of training steps between saving each checkpoint', default=50)
+parser.add_argument('-c', '--copy-steps', type=int, help='number of training steps between each copy of the critic to the actor', default=25)
 parser.add_argument('-r', '--render', help='render training', action='store_true', default=False)
 parser.add_argument('-p', '--path', help='path of the checkpoint file', default="my_dqn.ckpt")
 parser.add_argument("-v", "--verbosity", action="count", help="increase output verbosity", default=0)
-args = parser.parse_args()
+args = parser.parse_args()  # before slow imports so printing help can be fast
 
 from collections import deque
 import gym
@@ -87,7 +89,7 @@ def sample_memories():
 
 epsilon_min = 0.05
 epsilon_max = 1.0
-epsilon_decay_steps = 100000
+epsilon_decay_steps = 1000
 epsilon = epsilon_max
 
 def epsilon_greedy(q_values, epsilon):
@@ -147,5 +149,7 @@ with tf.Session() as sess:
             next_q_values = actor_q_values.eval(feed_dict={X_state: X_next_state_val})
             y_val = rewards + continues * gamma * np.max(next_q_values)
             training_op.run(feed_dict={X_state: X_state_val, X_action: X_action_val, y: y_val})
-            if iteration % (args.save_iterations * learning_every_n_steps) == 0:
+            if global_step.eval() % args.save_steps == 0:
                 saver.save(sess, args.path)
+            if global_step.eval() % args.copy_steps == 0:
+                copy_critic_to_actor.run()
