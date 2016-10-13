@@ -18,25 +18,7 @@ import tensorflow as tf
 from tensorflow.contrib.layers import convolution2d, fully_connected
 
 env = gym.make("MsPacman-v0")
-obs = env.reset()
-skip_start = 90
-for skip in range(skip_start):
-    obs, reward, done, info = env.step(0)
-
-wall_color = np.array([228, 111, 111]).mean()
-bg_color = np.array([0, 28, 136]).mean()
-mspacman_color = np.array([210, 164, 74]).mean()
-
-def preprocess_observation(obs):
-    img = obs[6:166:2, ::2] # crop and downsize
-    img = img.mean(axis=2) # to greyscale
-    img[img==wall_color] = 0 # improve contrast
-    img[img==bg_color] = 40
-    img[img==mspacman_color] = 255
-    img = (img - 128) / 128 - 1 # normalize from -1. to 1.
-    return img.reshape(80, 80, 1)
-
-img = preprocess_observation(obs)
+done = True  # env needs to be reset
 
 # Construction phase
 tf.reset_default_graph()
@@ -89,7 +71,7 @@ with tf.variable_scope("train"):
 init = tf.initialize_all_variables()
 saver = tf.train.Saver()
 
-# Replay memory and epsilon-greedy policy
+# Replay memory, epsilon-greedy policy and observation preprocessing
 replay_memory_size = 1000
 replay_memory = deque()
 
@@ -114,28 +96,42 @@ def epsilon_greedy(q_values, epsilon):
     else:
         return np.argmax(q_values) # optimal action
 
+wall_color = np.array([228, 111, 111]).mean()
+bg_color = np.array([0, 28, 136]).mean()
+mspacman_color = np.array([210, 164, 74]).mean()
+
+def preprocess_observation(obs):
+    img = obs[6:166:2, ::2] # crop and downsize
+    img = img.mean(axis=2) # to greyscale
+    img[img==wall_color] = 0 # improve contrast
+    img[img==bg_color] = 40
+    img[img==mspacman_color] = 255
+    img = (img - 128) / 128 - 1 # normalize from -1. to 1.
+    return img.reshape(80, 80, 1)
+
 # Execution phase
 n_iterations = args.iterations
 learning_start_step = 1000
 learning_every_n_steps = args.learn_iterations
 batch_size = 50
 gamma = 0.95
+skip_start = 90  # skip 90 steps at the start of each game (there is no movement)
 
 with tf.Session() as sess:
     if os.path.isfile(args.path):
         saver.restore(sess, args.path)
     else:
         init.run()
-    done = True
     for iteration in range(n_iterations):
         if args.verbosity > 0:
             print("\rIteration {}/{} ({:.1f}%)\tepsilon={:.2f}".format(iteration, n_iterations, iteration * 100 / n_iterations, epsilon), end="")
-        env.render()
         if done:
             obs = env.reset()
             for skip in range(skip_start):
                 obs, reward, done, info = env.step(0)
             state = preprocess_observation(obs)
+        if args.render:
+            env.render()
         q_values = actor_q_values.eval(feed_dict={X_state: [state]})
         epsilon = max(epsilon_min, epsilon_max - (epsilon_max - epsilon_min) * iteration / epsilon_decay_steps)
         action = epsilon_greedy(q_values, iteration)
