@@ -6,13 +6,13 @@ It is based on the 2013 paper by V. Mnih _et al._, "Playing Atari with Deep Rein
 
 The Q-networks (actor and critic) have 3 convolutional layers and two fully connected layers (including the output layer). This code implements a replay memory and ɛ-greedy policy for exploration.
 
-= Requirements
+## Requirements
 
 * OpenAI gym + dependencies for the Atari environment ([installation instructions](https://github.com/openai/gym#installation))
 * TensorFlow ([installation instructions](https://www.tensorflow.org/versions/master/get_started/os_setup.html))
 * Numpy (`pip install numpy`)
 
-= Usage
+## Usage
 
     python tiny_dqn.py --iterations 100000
 
@@ -24,7 +24,7 @@ For more options:
 
     python tiny_dqn.py --help
 
-= Disclaimer
+## Disclaimer
 This is a draft, I have not had the time to test it seriously yet. If you find any issue, please contact me or send a Pull Request.
 
 Enjoy!
