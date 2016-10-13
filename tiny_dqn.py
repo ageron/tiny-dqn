@@ -21,8 +21,6 @@ env = gym.make("MsPacman-v0")
 done = True  # env needs to be reset
 
 # Construction phase
-tf.reset_default_graph()
-
 input_height = 80
 input_width = 80
 input_channels = 1
