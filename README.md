@@ -14,11 +14,13 @@ The Q-networks (actor and critic) have 3 convolutional layers and two fully conn
 
 ## Usage
 
-    python tiny_dqn.py --iterations 100000
+To train the model:
 
-Saves the model to `my_dqn.ckpt`. To view it in action, run:
+    python tiny_dqn.py -v --number-steps 10000
 
-    python tiny_dqn.py --iterations 100000 --render
+The model is saved to `my_dqn.ckpt` by default. To view it in action, run:
+
+    python tiny_dqn.py --test --render
 
 For more options:
 
