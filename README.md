@@ -8,9 +8,32 @@ The Q-networks (actor and critic) have 3 convolutional layers and two fully conn
 
 ## Requirements
 
-* OpenAI gym + dependencies for the Atari environment ([installation instructions](https://github.com/openai/gym#installation))
-* TensorFlow ([installation instructions](https://www.tensorflow.org/versions/master/get_started/os_setup.html))
-* Numpy (`pip install numpy`)
+* OpenAI gym + dependencies for the Atari environment
+* TensorFlow 0.10+
+* Numpy
+
+## Installation
+
+### On MacOSX
+
+    $ brew install cmake boost boost-python sdl2 swig wget
+    $ cd $your_work_directory
+    $ git clone https://github.com/ageron/tiny-dqn.git
+    $ cd tiny-dqn
+    $ pip install --upgrade pip
+    $ pip install --upgrade -r requirements.txt
+    $ python tiny_dqn.py -v --render
+
+### On Ubuntu 14.04
+
+    $ apt-get install -y python-numpy python-dev cmake zlib1g-dev libjpeg-dev xvfb libav-tools xorg-dev python-opengl libboost-all-dev libsdl2-dev swig
+    $ cd $your_work_directory
+    $ git clone https://github.com/ageron/tiny-dqn.git
+    $ cd tiny-dqn
+    $ vim requirements.txt  # uncomment only the right version of TensorFlow
+    $ pip install --upgrade pip
+    $ pip install --upgrade -r requirements.txt
+    $ python tiny_dqn.py -v --render
 
 ## Usage
 
