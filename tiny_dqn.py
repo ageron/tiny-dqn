@@ -25,7 +25,7 @@ env = gym.make("MsPacman-v0")
 done = True  # env needs to be reset
 
 # TensorFlow - Construction phase
-input_height = 80
+input_height = 88
 input_width = 80
 input_channels = 1  # we only look at one frame at a time, so ghosts and power pellets really are invisible when they blink
 conv_n_maps = [32, 64, 64]
@@ -33,7 +33,7 @@ conv_kernel_sizes = [(8,8), (4,4), (3,3)]
 conv_strides = [4, 2, 1]
 conv_paddings = ["SAME"] * 3
 conv_activation = [tf.nn.relu] * 3
-n_hidden_inputs = 64 * 10 * 10  # conv3 has 64 maps of 10x10 each
+n_hidden_inputs = 64 * 11 * 10  # conv3 has 64 maps of 11x10 each
 n_hidden = 512
 hidden_activation = tf.nn.relu
 n_outputs = env.action_space.n  # MsPacman has 9 actions: upper left, up, upper right, left, and so on.
@@ -62,9 +62,10 @@ copy_ops = [actor_var.assign(critic_vars[var_name])
 copy_critic_to_actor = tf.group(*copy_ops)
 
 with tf.variable_scope("train"):
-    X_action = tf.placeholder(tf.int32, shape=[None, 1])
+    X_action = tf.placeholder(tf.int32, shape=[None])
     y = tf.placeholder(tf.float32, shape=[None, 1])
-    q_value = critic_q_values * tf.one_hot(X_action, n_outputs)
+    q_value = tf.reduce_sum(critic_q_values * tf.one_hot(X_action, n_outputs),
+                            reduction_indices=1, keep_dims=True)
     cost = tf.reduce_mean(tf.square(y - q_value))
     global_step = tf.Variable(0, trainable=False, name="global_step")
     optimizer = tf.train.AdamOptimizer(learning_rate)
@@ -75,7 +76,7 @@ saver = tf.train.Saver()
 
 # Replay memory, epsilon-greedy policy and observation preprocessing
 replay_memory_size = 1000
-replay_memory = deque()
+replay_memory = deque([], maxlen=replay_memory_size)
 
 def sample_memories(batch_size):
     indices = rnd.permutation(len(replay_memory))[:batch_size]
@@ -85,7 +86,7 @@ def sample_memories(batch_size):
         for col, value in zip(cols, memory):
             col.append(value)
     cols = [np.array(col) for col in cols]
-    return cols[0], cols[1].reshape(-1, 1), cols[2].reshape(-1, 1), cols[3], cols[4].reshape(-1, 1)
+    return cols[0], cols[1], cols[2].reshape(-1, 1), cols[3], cols[4].reshape(-1, 1)
 
 epsilon_min = 0.05
 epsilon_max = 1.0 if not args.test else epsilon_min
@@ -98,25 +99,21 @@ def epsilon_greedy(q_values, epsilon):
     else:
         return np.argmax(q_values) # optimal action
 
-wall_color = np.array([228, 111, 111]).mean()
-bg_color = np.array([0, 28, 136]).mean()
 mspacman_color = np.array([210, 164, 74]).mean()
 
 def preprocess_observation(obs):
-    img = obs[6:166:2, ::2] # crop and downsize
+    img = obs[1:176:2, ::2] # crop and downsize
     img = img.mean(axis=2) # to greyscale
-    img[img == wall_color] = 0 # improve contrast
-    img[img == bg_color] = 40
-    img[img == mspacman_color] = 255
+    img[img==mspacman_color] = 0 # Improve contrast
     img = (img - 128) / 128 - 1 # normalize from -1. to 1.
-    return img.reshape(80, 80, 1)
+    return img.reshape(88, 80, 1)
 
 # TensorFlow - Execution phase
 n_steps = args.number_steps
 learning_start_iteration = 1000
 learning_every_n_iterations = args.learn_iterations
 batch_size = 50
-gamma = 0.95
+discount_rate = 0.95
 skip_start = 90
 iteration = 0
 
@@ -151,17 +148,15 @@ with tf.Session() as sess:
         if args.test:
             continue
 
-        # Let's memorize what happened
+        # Let's memorize what just happened
         replay_memory.append((state, action, reward, next_state, 1.0 - done))
-        if len(replay_memory)>replay_memory_size:
-            replay_memory.popleft()
         state = next_state
 
         # Critic learns
         if iteration > learning_start_iteration and iteration % learning_every_n_iterations == 0:
             X_state_val, X_action_val, rewards, X_next_state_val, continues = sample_memories(batch_size)
             next_q_values = actor_q_values.eval(feed_dict={X_state: X_next_state_val})
-            y_val = rewards + continues * gamma * np.max(next_q_values)
+            y_val = rewards + continues * discount_rate * np.max(next_q_values, axis=1, keepdims=True)
             training_op.run(feed_dict={X_state: X_state_val, X_action: X_action_val, y: y_val})
 
             if global_step.eval() % args.save_steps == 0:
