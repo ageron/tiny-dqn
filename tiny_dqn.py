@@ -117,8 +117,8 @@ def sample_memories(batch_size):
 
 # And on to the epsilon-greedy policy with decaying epsilon
 eps_min = 0.1
-eps_max = 1.0
-eps_decay_steps = 2000000
+eps_max = 1.0 if not args.test else epsilon_min
+eps_decay_steps = args.number_steps // 2
 
 def epsilon_greedy(q_values, step):
     epsilon = max(eps_min, eps_max - (eps_max-eps_min) * step/eps_decay_steps)
