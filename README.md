@@ -4,12 +4,12 @@ A very short & simple python implementation of Deep Q Networks using TensorFlow 
 
 It is based on the 2013 paper by V. Mnih _et al._, "Playing Atari with Deep Reinforcement Learning": [arXiv:1312.5602](https://arxiv.org/pdf/1312.5602v1.pdf).
 
-The Q-networks (actor and critic) have 3 convolutional layers and two fully connected layers (including the output layer). This code implements a replay memory and ɛ-greedy policy for exploration.
+The two Q-networks (online DQN and target DQN) have 3 convolutional layers and two fully connected layers (including the output layer). This code implements a replay memory and ɛ-greedy policy for exploration.
 
 ## Requirements
 
 * OpenAI gym + dependencies for the Atari environment
-* TensorFlow 0.10+
+* TensorFlow 1.0+
 * Numpy
 
 ## Installation
@@ -20,8 +20,8 @@ The Q-networks (actor and critic) have 3 convolutional layers and two fully conn
     $ cd $your_work_directory
     $ git clone https://github.com/ageron/tiny-dqn.git
     $ cd tiny-dqn
-    $ pip install --upgrade pip
-    $ pip install --upgrade -r requirements.txt
+    $ pip install --user --upgrade pip
+    $ pip install --user --upgrade -r requirements.txt
     $ python tiny_dqn.py -v --render
 
 ### On Ubuntu 14.04
@@ -30,16 +30,16 @@ The Q-networks (actor and critic) have 3 convolutional layers and two fully conn
     $ cd $your_work_directory
     $ git clone https://github.com/ageron/tiny-dqn.git
     $ cd tiny-dqn
-    $ vim requirements.txt  # uncomment only the right version of TensorFlow
-    $ pip install --upgrade pip
-    $ pip install --upgrade -r requirements.txt
+    $ vim requirements.txt
+    $ pip install --user --upgrade pip
+    $ pip install --user --upgrade -r requirements.txt
     $ python tiny_dqn.py -v --render
 
 ## Usage
 
 To train the model:
 
-    python tiny_dqn.py -v --number-steps 10000
+    python tiny_dqn.py -v --number-steps 1000000
 
 The model is saved to `my_dqn.ckpt` by default. To view it in action, run:
 
